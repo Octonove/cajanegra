@@ -7,6 +7,7 @@ suite: insert_textbox con altos manuales descarta texto en silencio)."""
 from __future__ import annotations
 
 import html
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -36,6 +37,44 @@ def _measure(html_str: str, width: float) -> float:
 def _rgb(hexcolor: str):
     c = hexcolor.lstrip("#")
     return int(c[0:2], 16) / 255, int(c[2:4], 16) / 255, int(c[4:6], 16) / 255
+
+
+def quebrar_rachas(texto: str) -> str:
+    """Inserta U+200B (espacio de ancho cero) cada 40 caracteres seguidos sin
+    espacio: una 'palabra' mas ancha que la caja no puede envolverse y
+    insert_htmlbox encoge el bloque ENTERO para que quepa a lo ancho (el motor
+    de PyMuPDF ignora word-break/overflow-wrap/<wbr>; el U+200B si envuelve).
+    Aplicar sobre el texto crudo, antes de html.escape. Puro."""
+    return re.sub(r"\S{40}", lambda m: m.group(0) + "\u200b", texto)
+
+
+def partir_texto(texto: str, max_chars: int = 1500, max_lineas: int = 30) -> list[str]:
+    """Parte un texto largo en bloques que siempre caben en una pagina, cortando
+    por lineas y, si una sola linea excede max_chars (un log pegado sin saltos),
+    por trozos en el ultimo espacio. Hace falta limitar TAMBIEN las lineas por
+    bloque: muchas lineas cortas ocupan alto sin sumar apenas caracteres.
+    Sin este troceo, insert_htmlbox encoge un bloque mas alto que la pagina
+    (hasta 5pt, ilegible) y trunca en silencio lo que aun asi no cabe. Puro."""
+    bloques: list[str] = []
+    actual: list[str] = []
+    usado = 0
+    for linea in texto.split("\n"):
+        while len(linea) > max_chars:
+            if actual:
+                bloques.append("\n".join(actual))
+                actual, usado = [], 0
+            corte = linea.rfind(" ", 0, max_chars)
+            corte = corte if corte > max_chars // 2 else max_chars
+            bloques.append(linea[:corte])
+            linea = linea[corte:].lstrip(" ")
+        if actual and (usado + len(linea) > max_chars or len(actual) >= max_lineas):
+            bloques.append("\n".join(actual))
+            actual, usado = [], 0
+        actual.append(linea)
+        usado += len(linea) + 1
+    if actual:
+        bloques.append("\n".join(actual))
+    return bloques or [""]
 
 
 def exportar_dossier(out_path: str, *, momento: datetime, testimonio: str,
@@ -80,11 +119,16 @@ def exportar_dossier(out_path: str, *, momento: datetime, testimonio: str,
             + (f' &nbsp;·&nbsp; <b>Dias sin reiniciar:</b> {html.escape(str(sysinfo.get("dias_sin_reiniciar")))}'
                if sysinfo.get("dias_sin_reiniciar") else "") + '</div>', 10)
 
-        # testimonio
+        # testimonio: se emite POR BLOQUES para que put() pueda paginar entre
+        # ellos; un unico insert_htmlbox con un testimonio mas largo que una
+        # pagina encogia la fuente hasta 5pt y truncaba el final en silencio
+        # (irrecuperable: el dialogo se destruye tras generar)
         titulo("Que estaba pasando (testimonio del usuario)")
-        cuerpo = html.escape(testimonio.strip() or "(sin descripcion)").replace("\n", "<br>")
-        put(f'<div style="font-family:sans-serif;font-size:10px;color:#334155;line-height:1.5">'
-            f'{cuerpo}</div>', 8)
+        bloques = partir_texto(testimonio.strip() or "(sin descripcion)")
+        for i, bloque in enumerate(bloques):
+            cuerpo = html.escape(quebrar_rachas(bloque)).replace("\n", "<br>")
+            put(f'<div style="font-family:sans-serif;font-size:10px;color:#334155;line-height:1.5">'
+                f'{cuerpo}</div>', 8 if i == len(bloques) - 1 else 2)
         if transcripcion:
             put(f'<div style="font-family:sans-serif;font-size:10px;color:#64748b;'
                 f'line-height:1.5"><b>Nota de voz (transcrita en local):</b> '
@@ -129,7 +173,9 @@ def exportar_dossier(out_path: str, *, momento: datetime, testimonio: str,
                 f'<tr><td style="padding:2px 6px;white-space:nowrap;color:#64748b">{html.escape(e["hora"])}</td>'
                 f'<td style="padding:2px 6px;white-space:nowrap;color:{ROJO}">{html.escape(e["nivel"])}</td>'
                 f'<td style="padding:2px 6px"><b>{html.escape(e["fuente"])}</b> — '
-                f'{html.escape(e["mensaje"])}</td></tr>' for e in eventos)
+                # quebrar_rachas: un mensaje con un token largo sin espacios
+                # (ruta, GUID) encogeria la tabla ENTERA a lo ancho
+                f'{html.escape(quebrar_rachas(e["mensaje"]))}</td></tr>' for e in eventos)
             put(f'<table style="font-family:sans-serif;font-size:8px;border-collapse:collapse">{filas}</table>', 8)
         else:
             put('<div style="font-family:sans-serif;font-size:10px;color:#64748b">'

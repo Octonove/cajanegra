@@ -32,9 +32,24 @@ if (-not $iscc) {
     Write-Host "No se encontro Inno Setup (ISCC.exe). winget install JRSoftware.InnoSetup" -ForegroundColor Red
     exit 1
 }
-& $iscc "/DMyAppVersion=$ver" (Join-Path $PSScriptRoot "CajaNegra.iss")
+New-Item -ItemType Directory -Force -Path (Join-Path $root "installer") | Out-Null
+
+# Se compila a una carpeta TEMPORAL (via /O) porque el Windows Search Indexer
+# bloquea intermitentemente la carpeta de salida bajo el perfil e Inno falla con
+# "EndUpdateResource failed (110)". Luego se mueve a installer\.
+# (Mismo arreglo que CapturaPro, CapturaStudio y GuiaClick.)
+$tmpOut = Join-Path $env:TEMP "CajaNegra_setup_build"
+New-Item -ItemType Directory -Force -Path $tmpOut | Out-Null
+& $iscc "/DMyAppVersion=$ver" "/O$tmpOut" (Join-Path $PSScriptRoot "CajaNegra.iss")
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "`nInstalador: $(Join-Path $root ("installer\CajaNegra-Setup-$ver.exe"))" -ForegroundColor Green
+    $built = Join-Path $tmpOut "CajaNegra-Setup-$ver.exe"
+    if (-not (Test-Path $built)) {
+        Write-Host "`nNo se encontro el instalador compilado en $tmpOut." -ForegroundColor Red
+        exit 1
+    }
+    $dest = Join-Path $root ("installer\CajaNegra-Setup-$ver.exe")
+    Move-Item -Force -Path $built -Destination $dest
+    Write-Host "`nInstalador: $dest" -ForegroundColor Green
 } else {
     Write-Host "Fallo el instalador (codigo $LASTEXITCODE)." -ForegroundColor Red
     exit $LASTEXITCODE

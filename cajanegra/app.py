@@ -113,6 +113,20 @@ class App(tk.Tk):
             "Pulsa el boton — tambien funciona el atajo aunque esta ventana este minimizada —\n"
             "y CajaNegra congelara los ultimos minutos y montara el dossier para tu informatico."
         )).pack(anchor="w", pady=(10, 0))
+        # aviso persistente: el instalador NO empaqueta FFmpeg y sin el los
+        # dossieres salen sin video; antes se omitia en silencio y el usuario
+        # solo lo descubria en la linea 'Video adjunto: no' del PDF
+        self.lbl_ffmpeg = ttk.Label(big, style="Muted.TLabel", justify="left",
+                                    foreground="#D97706", text=(
+            "⚠ FFmpeg no esta instalado: los dossieres saldran SIN video (solo PDF).\n"
+            "Instalalo con:  winget install Gyan.FFmpeg  — no hace falta reiniciar la app."))
+        self._refresh_ffmpeg_warning()
+
+    def _refresh_ffmpeg_warning(self) -> None:
+        if self.ffmpeg:
+            self.lbl_ffmpeg.pack_forget()
+        elif not self.lbl_ffmpeg.winfo_manager():
+            self.lbl_ffmpeg.pack(anchor="w", pady=(10, 0))
 
     # ------------------------------------------------------------ vigilancia
     def _toggle_watch(self) -> None:
@@ -213,6 +227,10 @@ class App(tk.Tk):
             return
         self._reporting = True          # tambien cubre el showinfo: sin esto, el
         try:                            # hotkey repetido apilaba avisos infinitos
+            # re-deteccion en cada reporte: evaluado solo al arrancar, instalar
+            # FFmpeg con la app abierta obligaba a reiniciarla (y nadie lo decia)
+            self.ffmpeg = incident.find_ffmpeg(self.cfg.ffmpeg_path) or ""
+            self._refresh_ffmpeg_warning()
             frames = self.box.snapshot()
             if not frames:
                 self.deiconify()
@@ -304,6 +322,12 @@ class ReportDialog(tk.Toplevel):
         self.btn_voz.pack(side="left")
         self.lbl_voz = ttk.Label(row, text="", style="Muted.TLabel")
         self.lbl_voz.pack(side="left", padx=(10, 0))
+        if not app.ffmpeg:
+            # repetir el aviso aqui: es el momento en que el usuario espera el video
+            ttk.Label(frm, style="Muted.TLabel", justify="left", foreground="#D97706",
+                      text=("⚠ Sin FFmpeg el dossier saldra sin video (solo PDF). "
+                            "Instalalo: winget install Gyan.FFmpeg")).pack(
+                anchor="w", pady=(8, 0))
 
         btns = ttk.Frame(frm)
         btns.pack(fill="x", pady=(14, 0))
@@ -379,10 +403,14 @@ class ReportDialog(tk.Toplevel):
         tiene_voz = bool(self.recorder and self.recorder.ok)
         self.btn_ok.config(state="disabled")
         self.btn_voz.config(state="disabled")
-        self.lbl_prog.config(text="Montando el video y el dossier… (no cierres esta ventana)")
         frames = self.frames
         cfg = self.app.cfg
         ffmpeg = self.app.ffmpeg
+        # sin FFmpeg no habra video: no prometerlo en el progreso
+        self.lbl_prog.config(text=("Montando el video y el dossier… (no cierres esta ventana)"
+                                   if ffmpeg else
+                                   "Montando el dossier sin video (falta FFmpeg)… "
+                                   "(no cierres esta ventana)"))
         momento = datetime.now()
         stamp = momento.strftime("%Y-%m-%d_%H-%M-%S")
         outdir = Path(cfg.output_dir) / f"Incidente_{stamp}"

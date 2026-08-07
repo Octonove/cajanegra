@@ -151,6 +151,59 @@ def test_dossier_pdf(tmp_path):
     assert n_imgs == 5                  # los 5 fotogramas clave embebidos
 
 
+def test_partir_texto_multilinea_reconstruye_exacto():
+    texto = "\n".join(f"Linea {i} con algo de texto" for i in range(100))
+    bloques = report.partir_texto(texto)
+    assert len(bloques) > 1
+    assert "\n".join(bloques) == texto
+    assert all(len(b.split("\n")) <= 30 for b in bloques)
+
+
+def test_partir_texto_linea_gigante_sin_espacios():
+    # una sola linea de 4000 chars sin espacios: se corta en seco sin perder nada
+    texto = "A" * 4000
+    bloques = report.partir_texto(texto)
+    assert len(bloques) > 1
+    assert "".join(bloques) == texto
+    assert all(len(b) <= 1500 for b in bloques)
+
+
+def test_quebrar_rachas():
+    # racha larga sin espacios: gana puntos de corte U+200B cada 40 chars
+    out = report.quebrar_rachas("X" * 100)
+    assert out.replace("\u200b", "") == "X" * 100
+    assert out.count("\u200b") == 2
+    # el texto normal (palabras cortas) queda intacto
+    assert report.quebrar_rachas("hola mundo normal") == "hola mundo normal"
+
+
+def test_dossier_pdf_testimonio_largo_no_trunca_ni_encoge(tmp_path):
+    """Regresion: un testimonio mas largo que una pagina se emitia en un solo
+    insert_htmlbox, que encogia la fuente hasta 5pt y truncaba el final en
+    silencio. Ahora se pagina por bloques."""
+    import fitz
+    out = str(tmp_path / "largo.pdf")
+    testimonio = "\n".join(f"Linea {i} del testimonio con algo de texto para que ocupe"
+                           for i in range(1, 121))
+    report.exportar_dossier(
+        out, momento=datetime(2026, 7, 12, 17, 30), testimonio=testimonio,
+        transcripcion=None, frames_clave=[], eventos=[], procesos=[],
+        sysinfo={}, video_path=None, segundos_buffer=60.0)
+    doc = fitz.open(out)
+    text = "\n".join(doc[p].get_text("text") for p in range(doc.page_count))
+    sizes = {round(s["size"], 1)
+             for p in range(doc.page_count)
+             for b in doc[p].get_text("dict")["blocks"]
+             for l in b.get("lines", [])
+             for s in l["spans"]}
+    n_pages = doc.page_count
+    doc.close()
+    text = text.replace("\u200b", "")
+    assert n_pages > 1                      # el testimonio pagina, no se aplasta
+    assert "Linea 1 " in text and "Linea 60 " in text and "Linea 120" in text
+    assert min(sizes) >= 8.0                # nada encogido por debajo del pie (8px)
+
+
 def test_dossier_pdf_sin_datos_opcionales(tmp_path):
     import fitz
     out = str(tmp_path / "min.pdf")
