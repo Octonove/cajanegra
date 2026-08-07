@@ -106,13 +106,59 @@ def _unlink_quiet(path: str) -> None:
         pass
 
 
+def _pid_de_workdir(nombre: str) -> int | None:
+    """pid del nombre 'inc_<pid>_<ts>'; None si no se puede parsear. PURO."""
+    partes = nombre.split("_")
+    if len(partes) >= 3 and partes[0] == "inc":
+        try:
+            return int(partes[1])
+        except ValueError:
+            return None
+    return None
+
+
+def _pid_vivo(pid: int) -> bool:
+    """True si el proceso existe. Conservador: ante la duda (permisos), VIVO."""
+    import ctypes
+    try:
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        h = k32.OpenProcess(0x1000, False, int(pid))   # PROCESS_QUERY_LIMITED_INFORMATION
+        if h:
+            k32.CloseHandle(h)
+            return True
+        # ERROR_INVALID_PARAMETER (87) = el pid no existe; otros errores
+        # (ACCESS_DENIED...) significan que el proceso SI existe o no sabemos.
+        return ctypes.get_last_error() != 87
+    except Exception:  # noqa: BLE001
+        return True
+
+
+def debe_purgarse(pid: int | None, edad_horas: float) -> bool:
+    """Decision de purga. PURO respecto a sus entradas: se borra solo si el
+    proceso dueno ya no existe o la carpeta es vieja (>24 h). Antes se borraba
+    cualquier inc_* de otro pid AUNQUE ESTUVIERA VIVO: una segunda instancia
+    barria los JPEG de la primera en pleno montaje y le perdia el video."""
+    if edad_horas > 24.0:
+        return True
+    if pid is None:
+        return False           # nombre raro: mejor no tocar hasta que envejezca
+    return not _pid_vivo(pid)
+
+
 def _purge_old_workdirs() -> None:
     """Barre carpetas inc_* de montajes anteriores que murieron a medias: sin
     esto, capturas de pantalla huerfanas quedarian en disco para siempre."""
     import shutil
+    import time
     try:
         for d in work_dir().glob("inc_*"):
-            if d.is_dir() and not d.name.startswith(f"inc_{os.getpid()}_"):
+            if not d.is_dir() or d.name.startswith(f"inc_{os.getpid()}_"):
+                continue
+            try:
+                edad_h = (time.time() - d.stat().st_mtime) / 3600.0
+            except OSError:
+                continue
+            if debe_purgarse(_pid_de_workdir(d.name), edad_h):
                 shutil.rmtree(d, ignore_errors=True)
     except OSError:
         pass

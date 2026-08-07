@@ -216,3 +216,40 @@ def test_dossier_pdf_sin_datos_opcionales(tmp_path):
     doc.close()
     assert "sin descripcion" in text
     assert "Sin errores recientes" in text
+
+
+def test_pid_de_workdir():
+    from cajanegra.incident import _pid_de_workdir
+    assert _pid_de_workdir("inc_1234_1700000000") == 1234
+    assert _pid_de_workdir("inc_abc_1700000000") is None
+    assert _pid_de_workdir("otracosa") is None
+
+
+def test_debe_purgarse():
+    import os
+    from cajanegra.incident import debe_purgarse
+    # carpeta vieja: se purga siempre, viva o no
+    assert debe_purgarse(os.getpid(), 25.0) is True
+    # pid VIVO (el nuestro) y carpeta reciente: NO se purga
+    assert debe_purgarse(os.getpid(), 1.0) is False
+    # pid inexistente y reciente: se purga (proceso muerto)
+    assert debe_purgarse(999999999, 1.0) is True
+    # nombre raro (pid None) reciente: no tocar hasta que envejezca
+    assert debe_purgarse(None, 1.0) is False
+
+
+def test_instancia_unica_mutex():
+    """El guard detecta un mutex ya adquirido desde OTRO proceso."""
+    import subprocess
+    import sys
+    sys.path.insert(0, ".")
+    from CajaNegra import _single_instance
+    nombre = f"Local\CajaNegraTest{__import__('os').getpid()}"
+    assert _single_instance(nombre) is True          # 1a adquisicion: libre
+    code = (
+        "import sys; sys.path.insert(0, r'" + __import__("os").getcwd() + "');"
+        "from CajaNegra import _single_instance;"
+        f"sys.exit(0 if not _single_instance(r'{nombre}') else 1)"
+    )
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, timeout=30)
+    assert r.returncode == 0, r.stderr.decode(errors="replace")
