@@ -1,52 +1,53 @@
 # CajaNegra
 
-La **caja negra de tu PC**, 100% local: mantiene en memoria los últimos minutos de tu pantalla y, cuando algo falla, pulsas **⚑ Reportar incidente** (o `Ctrl+Alt+F9`) y genera un **dossier perfecto para tu informático**: vídeo de lo que pasó, tu explicación (escrita o con nota de voz), los errores recientes de Windows y los procesos activos.
+[![license](https://img.shields.io/github/license/Octonove/cajanegra)](LICENSE)
+[![release](https://img.shields.io/github/v/release/Octonove/cajanegra)](https://github.com/Octonove/cajanegra/releases/latest)
+[![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-1E3A5F)](https://github.com/Octonove/cajanegra/releases/latest)
 
-Se acabó el *"no sé, me salió un error y se cerró"*. Como el dashcam de un coche: **graba siempre, decides después**.
+A dashcam for your PC: the last minutes of your screen, one hotkey away from a perfect incident report.
 
-## 🔒 Privacidad por diseño
+**Free · Open source (MIT) · 100% local — nothing ever leaves your PC · No accounts, no limits, no watermarks**
 
-- El buffer vive **solo en la memoria RAM**: no se escribe nada en disco hasta que TÚ reportas.
-- **No hay audio continuo**: la única grabación posible es tu nota de voz voluntaria de 30 s al reportar.
-- Al pausar o cerrar la app, el buffer se descarta. Nada sale de tu equipo, sin cuentas ni nube.
+<img src="docs/screenshot.png" width="720" alt="CajaNegra screenshot">
 
-## ⬇️ Descargar (Windows 10/11)
+> 🇪🇸 ¿Prefieres leerlo en español? → **[README en español](README.es.md)**
 
-### ➡️ [**Descargar CajaNegra (instalador .exe)**](https://github.com/Octonove/cajanegra/releases/latest/download/CajaNegra-Setup.exe)
+## Features
 
-Descarga **directa** del instalador, sin registro. También puedes ver la [última versión y notas](https://github.com/Octonove/cajanegra/releases/latest).
+- Keeps the last minutes of your screen in a **RAM ring buffer** — nothing touches the disk until you report
+- One hotkey (**Ctrl+Alt+F9**) builds the dossier: video, your testimony (typed or voice-transcribed), recent Windows event errors and running processes
+- A PDF your IT person will actually thank you for
+- No continuous audio recording; 100% local
 
-> Si Windows muestra *"Windows protegió tu PC"* (es normal en programas nuevos sin firma): pulsa **Más información → Ejecutar de todas formas**. Se instala sin permisos de administrador.
+## Download (Windows 10/11)
 
-## Cómo funciona
+### ➡️ [**Download CajaNegra (installer .exe)**](https://github.com/Octonove/cajanegra/releases/latest/download/CajaNegra-Setup.exe)
 
-1. Deja CajaNegra **vigilando** (1-2 capturas por segundo de tu pantalla, últimos 1-10 minutos en RAM).
-2. Cuando algo raro pase, pulsa **⚑ Reportar incidente** o `Ctrl+Alt+F9` (funciona con la ventana minimizada).
-3. Cuenta qué estaba pasando (texto o 🎙 nota de voz de 30 s) y CajaNegra genera una carpeta con:
-   - `incidente.mp4` — el vídeo de los últimos minutos (necesita [FFmpeg](https://ffmpeg.org); `winget install Gyan.FFmpeg`),
-   - `informe_incidente.pdf` — el dossier: cronología, fotogramas clave, tu testimonio (con transcripción local por Whisper si otra app de la suite ya descargó el modelo), errores del Visor de eventos y procesos con más memoria,
-   - `nota_de_voz.wav` — si la grabaste.
-4. Envía la carpeta por email o WhatsApp a tu informático. Fin de la adivinación.
+Direct download, no sign-up. If Windows shows *"Windows protected your PC"* (normal for new unsigned apps): click **More info → Run anyway**. Installs without administrator rights.
 
-## Stack
+> ⭐ **If CajaNegra is useful to you, a star on GitHub is the best way to support it — it costs nothing and helps a lot.**
 
-Python 3 + Tkinter (ttk) · mss + Pillow (buffer) · FFmpeg (vídeo, filtro whisper opcional) · soundcard (nota de voz) · PyMuPDF (dossier) · ctypes/Win32.
+## More free local-first tools
 
-Depende del paquete compartido de la suite [`octonove-core`](https://github.com/Octonove/octonove-core) (tema, config, FFmpeg): debe estar en el `sys.path` del entorno (vía `.pth` o copia junto al proyecto).
+Every tool in this family follows the same rules: free, open source, and nothing leaves your PC.
 
-## Compilar
+| Tool | What it does |
+|---|---|
+| [CapturaPro](https://github.com/Octonove/capturapro) | Screenshots, GIFs and screen recordings for Windows — annotated, watermark-free, 100% local. |
+| [TranscriptorIA](https://github.com/Octonove/transcriptor-ia) | Audio & video to text and .srt subtitles with local Whisper AI — free, private, unlimited. |
+| [PDFLocal](https://github.com/Octonove/pdflocal) | The full PDF toolbox for Windows: merge, split, compress, sign, OCR and chat with your documents — no uploads. |
+| [CajaPDF](https://github.com/Octonove/cajapdf) | The tiny PDF utility: merge, split and compress — free, offline, no accounts. |
+| [CapturaStudio](https://github.com/Octonove/capturastudio) | An OBS-style recording & streaming studio with local AI superpowers — record, stream, auto-edit. |
+| [GuiaClick](https://github.com/Octonove/guiaclick) | Record your clicks, get a step-by-step guide — annotated screenshots, blur, PDF/HTML export. Like Scribe, but local. |
+| [ActaLocal](https://github.com/Octonove/actalocal) | Meetings → minutes: local Whisper transcription plus AI summary, decisions and action items. |
+| [AutoEscritorio](https://github.com/Octonove/autoescritorio) | Trigger→action automation for Windows: watch folders, hotkeys, USB, clipboard — simple and local. |
+| [BalanceLocal](https://github.com/Octonove/balancelocal) | Your work Wrapped: where your time actually goes, as shareable cards, a PDF report and a mini-video. |
+| [FichajeLocal](https://github.com/Octonove/fichajelocal) | A local time-clock kiosk for small business: PIN check-in, tamper-evident records, accountant-ready reports. |
+| [ITVLocal](https://github.com/Octonove/itvlocal) | An MOT-style inspection for your PC: 1–3 minutes, a 0–10 score and a PDF certificate. Inspects, never modifies. |
+| [SonarArchivo](https://github.com/Octonove/sonararchivo) | Find files by what's INSIDE them: local full-text search over your messy folders and old drives. |
 
-```powershell
-.\build\build.ps1              # ejecutable (PyInstaller onedir)
-.\build\build-installer.ps1    # instalador (Inno Setup)
-```
+Also: **[CRBRO](https://github.com/Octonove/crbro-memory)** — persistent neural memory for AI agents (MCP server).
 
-## Tests
+## License
 
-```powershell
-python -m pytest tests/ -q
-```
-
-## Licencia
-
-[MIT](LICENSE) — © 2026 Octonove.
+[MIT](LICENSE) — see also [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) where present.
