@@ -12,6 +12,11 @@ A dashcam for your PC: the last minutes of your screen, one hotkey away from a p
 
 > 🇪🇸 ¿Prefieres leerlo en español? → **[README en español](README.es.md)**
 
+<!-- invokard-coffee -->
+**&#9749; If this saves you time, buy me a coffee.** [![Buy me a coffee with PayPal](https://img.shields.io/badge/PayPal-Buy%20me%20a%20coffee-00457C?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?business=stradoxx%40gmail.com&no_recurring=0&currency_code=EUR&item_name=Support%20cajanegra)
+
+**USDC** &middot; Solana `5n6Gfosk7SdwbvdtE9xiLWpcGPBBBGDZYRfAkWyCk86g` &middot; Ethereum (ERC-20) `0xe176866f9d7fdb498e0d4a983d3e34d84dcd6bfc`
+
 ## Features
 
 - Keeps the last minutes of your screen in a **RAM ring buffer** — nothing touches the disk until you report
